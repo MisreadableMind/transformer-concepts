@@ -1,0 +1,1540 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Transformers & LLMs — Interactive Lab</title>
+    <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=IBM+Plex+Sans:wght@300;400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --black: #000000;
+            --white: #ffffff;
+            --grid-color: #e0e0e0;
+            --accent: #ff3366;
+            --secondary: #0066ff;
+            --highlight: #ffff00;
+            --mono: 'Space Mono', monospace;
+            --sans: 'IBM Plex Sans', sans-serif;
+        }
+
+        body {
+            font-family: var(--sans);
+            background: var(--white);
+            color: var(--black);
+            line-height: 1.5;
+        }
+
+        .container {
+            display: grid;
+            grid-template-columns: 280px 1fr;
+            min-height: 100vh;
+            border: 4px solid var(--black);
+        }
+
+        .sidebar {
+            background: var(--black);
+            color: var(--white);
+            border-right: 4px solid var(--black);
+            padding: 0;
+        }
+
+        .logo {
+            padding: 32px 24px;
+            border-bottom: 2px solid var(--white);
+        }
+
+        .logo h1 {
+            font-family: var(--mono);
+            font-size: 1.5em;
+            font-weight: 700;
+            letter-spacing: -0.02em;
+            margin-bottom: 8px;
+        }
+
+        .logo p {
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            opacity: 0.7;
+        }
+
+        .nav-tabs {
+            display: flex;
+            flex-direction: column;
+        }
+
+        .nav-tab {
+            padding: 16px 24px;
+            cursor: pointer;
+            border: none;
+            background: var(--black);
+            color: var(--white);
+            font-size: 0.875em;
+            text-align: left;
+            font-family: var(--mono);
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            transition: all 0.15s;
+            border-left: 4px solid transparent;
+            border-bottom: 1px solid rgba(255,255,255,0.1);
+        }
+
+        .nav-tab:hover {
+            background: rgba(255,255,255,0.1);
+            border-left-color: var(--highlight);
+        }
+
+        .nav-tab.active {
+            background: var(--accent);
+            border-left-color: var(--highlight);
+            font-weight: 700;
+        }
+
+        .content {
+            padding: 64px;
+            background: 
+                linear-gradient(90deg, var(--grid-color) 1px, transparent 1px),
+                linear-gradient(180deg, var(--grid-color) 1px, transparent 1px);
+            background-size: 20px 20px;
+        }
+
+        .concept-section {
+            display: none;
+        }
+
+        .concept-section.active {
+            display: block;
+            animation: slideIn 0.3s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { opacity: 0; transform: translateX(20px); }
+            to { opacity: 1; transform: translateX(0); }
+        }
+
+        .concept-title {
+            font-family: var(--mono);
+            font-size: 3em;
+            font-weight: 700;
+            margin-bottom: 16px;
+            letter-spacing: -0.02em;
+            text-transform: uppercase;
+            border: 4px solid var(--black);
+            padding: 24px;
+            background: var(--white);
+            position: relative;
+        }
+
+        .concept-title::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            right: -8px;
+            width: 100%;
+            height: 100%;
+            border: 4px solid var(--accent);
+            z-index: -1;
+        }
+
+        .concept-subtitle {
+            font-size: 1.125em;
+            margin-bottom: 48px;
+            font-weight: 300;
+            max-width: 600px;
+        }
+
+        .test-area {
+            background: var(--white);
+            border: 4px solid var(--black);
+            padding: 32px;
+            margin: 32px 0;
+            position: relative;
+        }
+
+        .test-area::before {
+            content: 'INTERACTIVE TEST';
+            position: absolute;
+            top: -12px;
+            left: 24px;
+            background: var(--accent);
+            color: var(--white);
+            padding: 4px 16px;
+            font-family: var(--mono);
+            font-size: 0.625em;
+            font-weight: 700;
+            letter-spacing: 0.1em;
+        }
+
+        .section-label {
+            font-family: var(--mono);
+            font-size: 0.75em;
+            font-weight: 700;
+            color: var(--black);
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-bottom: 16px;
+            padding: 8px 16px;
+            background: var(--highlight);
+            display: inline-block;
+        }
+
+        canvas {
+            border: 4px solid var(--black);
+            display: block;
+            margin: 24px 0;
+            background: var(--white);
+            box-shadow: 8px 8px 0 rgba(0,0,0,0.1);
+        }
+
+        .controls {
+            display: flex;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin: 24px 0;
+        }
+
+        button {
+            padding: 12px 24px;
+            background: var(--white);
+            color: var(--black);
+            border: 3px solid var(--black);
+            font-family: var(--mono);
+            font-size: 0.75em;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            cursor: pointer;
+            transition: all 0.15s;
+        }
+
+        button:hover {
+            background: var(--black);
+            color: var(--white);
+            transform: translate(-2px, -2px);
+            box-shadow: 4px 4px 0 var(--accent);
+        }
+
+        button:active {
+            transform: translate(0, 0);
+            box-shadow: none;
+        }
+
+        button.primary {
+            background: var(--secondary);
+            color: var(--white);
+            border-color: var(--secondary);
+        }
+
+        button.primary:hover {
+            background: var(--black);
+            border-color: var(--black);
+        }
+
+        input[type="range"] {
+            width: 300px;
+            height: 8px;
+            background: var(--grid-color);
+            border: 2px solid var(--black);
+            outline: none;
+            appearance: none;
+        }
+
+        input[type="range"]::-webkit-slider-thumb {
+            appearance: none;
+            width: 24px;
+            height: 24px;
+            background: var(--accent);
+            border: 3px solid var(--black);
+            cursor: pointer;
+        }
+
+        input[type="range"]::-moz-range-thumb {
+            width: 24px;
+            height: 24px;
+            background: var(--accent);
+            border: 3px solid var(--black);
+            cursor: pointer;
+        }
+
+        .slider-container {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            margin: 24px 0;
+            padding: 24px;
+            background: var(--white);
+            border: 3px solid var(--black);
+        }
+
+        .slider-label {
+            font-family: var(--mono);
+            font-weight: 700;
+            min-width: 140px;
+            font-size: 0.875em;
+            text-transform: uppercase;
+        }
+
+        .slider-value {
+            min-width: 60px;
+            text-align: center;
+            font-weight: 700;
+            color: var(--accent);
+            font-family: var(--mono);
+            font-size: 1.5em;
+        }
+
+        .explanation {
+            background: var(--highlight);
+            border: 3px solid var(--black);
+            padding: 24px;
+            margin: 32px 0;
+            font-size: 0.875em;
+            line-height: 1.7;
+        }
+
+        .explanation strong {
+            font-weight: 700;
+            text-transform: uppercase;
+            font-size: 0.75em;
+            letter-spacing: 0.05em;
+        }
+
+        .token-box {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 6px;
+            background: var(--white);
+            color: var(--black);
+            border: 3px solid var(--black);
+            font-family: var(--mono);
+            font-size: 0.875em;
+            transition: all 0.15s;
+            cursor: pointer;
+        }
+
+        .token-box:hover {
+            background: var(--accent);
+            color: var(--white);
+            transform: translate(-3px, -3px);
+            box-shadow: 3px 3px 0 var(--black);
+        }
+
+        .similarity-demo {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 24px;
+            margin: 32px 0;
+        }
+
+        .word-card {
+            background: var(--white);
+            padding: 32px;
+            border: 4px solid var(--black);
+            text-align: center;
+            transition: all 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .word-card::after {
+            content: '';
+            position: absolute;
+            bottom: -6px;
+            right: -6px;
+            width: 100%;
+            height: 100%;
+            border: 4px solid var(--secondary);
+            z-index: -1;
+            transition: all 0.2s;
+        }
+
+        .word-card:hover::after {
+            bottom: -12px;
+            right: -12px;
+        }
+
+        .word-card:hover {
+            transform: translate(-3px, -3px);
+        }
+
+        .word-card h3 {
+            font-size: 1.25em;
+            font-weight: 700;
+            margin-bottom: 12px;
+            font-family: var(--mono);
+        }
+
+        .word-card p {
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .lifecycle-flow {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 40px 0;
+            flex-wrap: wrap;
+        }
+
+        .lifecycle-stage {
+            background: var(--white);
+            padding: 32px;
+            border: 4px solid var(--black);
+            text-align: center;
+            flex: 1;
+            margin: 12px;
+            min-width: 200px;
+            transition: all 0.2s;
+            cursor: pointer;
+            position: relative;
+        }
+
+        .lifecycle-stage::before {
+            content: '';
+            position: absolute;
+            top: -8px;
+            left: -8px;
+            width: 100%;
+            height: 100%;
+            background: var(--accent);
+            z-index: -1;
+            transition: all 0.2s;
+        }
+
+        .lifecycle-stage:hover::before {
+            top: -12px;
+            left: -12px;
+        }
+
+        .lifecycle-stage h3 {
+            font-size: 1.125em;
+            font-weight: 700;
+            margin-bottom: 8px;
+            font-family: var(--mono);
+        }
+
+        .lifecycle-stage p {
+            font-size: 0.875em;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+        }
+
+        .stage-arrow {
+            font-size: 2em;
+            color: var(--black);
+            margin: 0 12px;
+            font-weight: 700;
+        }
+
+        input[type="text"] {
+            width: 100%;
+            padding: 16px;
+            font-size: 1em;
+            border: 3px solid var(--black);
+            margin: 16px 0;
+            font-family: var(--mono);
+            background: var(--white);
+        }
+
+        input[type="text"]:focus {
+            outline: none;
+            border-color: var(--accent);
+            box-shadow: 0 0 0 3px rgba(255, 51, 102, 0.2);
+        }
+
+        .tokenizer-output {
+            margin: 24px 0;
+            min-height: 80px;
+            padding: 16px;
+            background: rgba(255,255,255,0.5);
+            border: 2px dashed var(--black);
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+
+        .pulse {
+            animation: pulse 2s infinite;
+        }
+
+        .stats-box {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 16px;
+            margin: 32px 0;
+        }
+
+        .stat {
+            background: var(--black);
+            color: var(--white);
+            padding: 24px;
+            border: 4px solid var(--black);
+            text-align: center;
+        }
+
+        .stat-value {
+            font-family: var(--mono);
+            font-size: 2.5em;
+            font-weight: 700;
+            color: var(--accent);
+            display: block;
+        }
+
+        .stat-label {
+            font-size: 0.75em;
+            text-transform: uppercase;
+            letter-spacing: 0.1em;
+            margin-top: 8px;
+        }
+
+        @media (max-width: 1024px) {
+            .container {
+                grid-template-columns: 1fr;
+            }
+            
+            .sidebar {
+                border-right: none;
+                border-bottom: 4px solid var(--black);
+            }
+            
+            .content {
+                padding: 32px 24px;
+            }
+            
+            .concept-title {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="sidebar">
+            <div class="logo">
+                <h1>⚡ TRANSFORMERS</h1>
+                <p>Interactive Lab</p>
+            </div>
+
+            <div class="nav-tabs">
+                <button class="nav-tab active" onclick="showSection('tokenization')">01 / Tokenization</button>
+                <button class="nav-tab" onclick="showSection('embeddings')">02 / Embeddings</button>
+                <button class="nav-tab" onclick="showSection('attention')">03 / Attention</button>
+                <button class="nav-tab" onclick="showSection('architecture')">04 / Architecture</button>
+                <button class="nav-tab" onclick="showSection('temperature')">05 / Temperature</button>
+                <button class="nav-tab" onclick="showSection('lifecycle')">06 / Lifecycle</button>
+                <button class="nav-tab" onclick="showSection('lora')">07 / LoRA</button>
+            </div>
+        </div>
+
+        <div class="content">
+            <!-- Tokenization Section -->
+            <div id="tokenization" class="concept-section active">
+                <h2 class="concept-title">Tokenization</h2>
+                <p class="concept-subtitle">Breaking text into indivisible units. Test different tokenization strategies on your own text.</p>
+                
+                <div class="test-area">
+                    <div class="section-label">Test Input</div>
+                    <input type="text" id="tokenInput" placeholder="TYPE YOUR TEXT HERE..." value="this teddy bear is reaaaally cute">
+                    
+                    <div class="controls">
+                        <button onclick="tokenize('word')">Word Level</button>
+                        <button onclick="tokenize('subword')">Subword (BPE)</button>
+                        <button onclick="tokenize('char')">Character</button>
+                    </div>
+                    
+                    <div class="tokenizer-output" id="tokenOutput"></div>
+                    
+                    <div class="stats-box" id="tokenStats"></div>
+                </div>
+                
+                <div class="explanation">
+                    <strong>How it works</strong><br>
+                    <span id="tokenizerExplanation">Select a tokenizer above to see how different strategies break down text into tokens.</span>
+                </div>
+            </div>
+
+            <!-- Embeddings Section -->
+            <div id="embeddings" class="concept-section">
+                <h2 class="concept-title">Embeddings</h2>
+                <p class="concept-subtitle">Words as numerical vectors in high-dimensional space. Test semantic similarity between different word pairs.</p>
+                
+                <div class="test-area">
+                    <div class="section-label">Vector Space</div>
+                    
+                    <canvas id="embeddingCanvas" width="900" height="500"></canvas>
+                    
+                    <div class="similarity-demo">
+                        <div class="word-card" onclick="showSimilarity('teddy', 'bear', 0.92)">
+                            <h3>🧸 ↔ 🐻</h3>
+                            <p>teddy / bear</p>
+                        </div>
+                        <div class="word-card" onclick="showSimilarity('teddy', 'cute', 0.75)">
+                            <h3>🧸 ↔ 😊</h3>
+                            <p>teddy / cute</p>
+                        </div>
+                        <div class="word-card" onclick="showSimilarity('teddy', 'airplane', 0.15)">
+                            <h3>🧸 ↔ ✈️</h3>
+                            <p>teddy / airplane</p>
+                        </div>
+                    </div>
+                    
+                    <div class="stats-box" id="similarityStats"></div>
+                </div>
+                
+                <div class="explanation">
+                    <strong>Cosine Similarity Formula</strong><br>
+                    similarity(t₁, t₂) = (t₁ · t₂) / (||t₁|| ||t₂||) = cos(θ)<br><br>
+                    The angle θ between vectors determines similarity: 0° = identical, 90° = independent, 180° = opposite.
+                </div>
+            </div>
+
+            <!-- Attention Section -->
+            <div id="attention" class="concept-section">
+                <h2 class="concept-title">Attention</h2>
+                <p class="concept-subtitle">How models determine which tokens to focus on. Click any word to see its attention pattern.</p>
+                
+                <div class="test-area">
+                    <div class="section-label">Attention Visualization</div>
+                    
+                    <canvas id="attentionCanvas" width="900" height="600"></canvas>
+                    
+                    <div class="stats-box" id="attentionStats"></div>
+                </div>
+                
+                <div class="explanation">
+                    <strong>Attention Formula</strong><br>
+                    attention = softmax(QK^T / √d_k) × V<br><br>
+                    Query (Q) represents what we're looking for. Keys (K) represent what's available. Values (V) are the actual content.
+                </div>
+            </div>
+
+            <!-- Architecture Section -->
+            <div id="architecture" class="concept-section">
+                <h2 class="concept-title">Architecture</h2>
+                <p class="concept-subtitle">Different transformer variants for different tasks. Test each architecture type.</p>
+                
+                <div class="test-area">
+                    <div class="section-label">Architecture Variants</div>
+                    
+                    <div class="controls">
+                        <button onclick="showArchitecture('encoder')">Encoder-Only</button>
+                        <button onclick="showArchitecture('decoder')" class="primary">Decoder-Only</button>
+                        <button onclick="showArchitecture('both')">Encoder-Decoder</button>
+                    </div>
+                    
+                    <canvas id="architectureCanvas" width="900" height="700"></canvas>
+                    
+                    <div class="stats-box" id="archStats"></div>
+                </div>
+                
+                <div class="explanation" id="archExplanation">
+                    <strong>Select an architecture</strong><br>
+                    Click a button above to explore different transformer architectures and their use cases.
+                </div>
+            </div>
+
+            <!-- Temperature Section -->
+            <div id="temperature" class="concept-section">
+                <h2 class="concept-title">Temperature</h2>
+                <p class="concept-subtitle">Control randomness in model outputs. Adjust the slider to see probability distribution changes.</p>
+                
+                <div class="test-area">
+                    <div class="section-label">Temperature Control</div>
+                    
+                    <div class="slider-container">
+                        <span class="slider-label">Temperature:</span>
+                        <input type="range" id="tempSlider" min="0.1" max="2" step="0.1" value="1.0" oninput="updateTemperature(this.value)">
+                        <span class="slider-value" id="tempValue">1.0</span>
+                    </div>
+                    
+                    <canvas id="temperatureCanvas" width="900" height="500"></canvas>
+                    
+                    <div class="stats-box" id="tempStats"></div>
+                </div>
+                
+                <div class="explanation">
+                    <strong>Temperature Formula</strong><br>
+                    p_i = exp(x_i / T) / Σ exp(x_j / T)<br><br>
+                    T → 0: Deterministic (always picks highest probability)<br>
+                    T = 1: Standard sampling<br>
+                    T → ∞: Uniform random (all tokens equally likely)
+                </div>
+            </div>
+
+            <!-- LLM Lifecycle Section -->
+            <div id="lifecycle" class="concept-section">
+                <h2 class="concept-title">LLM Lifecycle</h2>
+                <p class="concept-subtitle">Three-stage training process. Click each stage to see details.</p>
+                
+                <div class="test-area">
+                    <div class="section-label">Training Pipeline</div>
+                    
+                    <div class="lifecycle-flow">
+                        <div class="lifecycle-stage pulse" onclick="explainStage('pretrain')">
+                            <h3>01 / PRETRAIN</h3>
+                            <p>Language Patterns</p>
+                        </div>
+                        <span class="stage-arrow">→</span>
+                        <div class="lifecycle-stage" onclick="explainStage('finetune')">
+                            <h3>02 / FINETUNE</h3>
+                            <p>Task Specific</p>
+                        </div>
+                        <span class="stage-arrow">→</span>
+                        <div class="lifecycle-stage" onclick="explainStage('preference')">
+                            <h3>03 / ALIGN</h3>
+                            <p>Human Feedback</p>
+                        </div>
+                    </div>
+                    
+                    <canvas id="lifecycleCanvas" width="900" height="400"></canvas>
+                    
+                    <div class="stats-box" id="lifecycleStats"></div>
+                </div>
+                
+                <div class="explanation" id="stageExplanation">
+                    <strong>Training Stages</strong><br>
+                    Click on each stage above to see how LLMs are trained from raw text to aligned assistants.
+                </div>
+            </div>
+
+            <!-- LoRA Section -->
+            <div id="lora" class="concept-section">
+                <h2 class="concept-title">LoRA</h2>
+                <p class="concept-subtitle">Low-Rank Adaptation for efficient fine-tuning. Adjust rank to see parameter reduction.</p>
+                
+                <div class="test-area">
+                    <div class="section-label">Parameter Efficiency</div>
+                    
+                    <div class="slider-container">
+                        <span class="slider-label">Rank (r):</span>
+                        <input type="range" id="rankSlider" min="1" max="64" step="1" value="8" oninput="updateLoRA(this.value)">
+                        <span class="slider-value" id="rankValue">8</span>
+                    </div>
+                    
+                    <canvas id="loraCanvas" width="900" height="500"></canvas>
+                    
+                    <div class="stats-box" id="loraStats"></div>
+                </div>
+                
+                <div class="explanation" id="loraExplanation">
+                    <strong>LoRA Formula</strong><br>
+                    W ≈ W₀ + B × A, where B ∈ ℝ^(d×r) and A ∈ ℝ^(r×k)<br><br>
+                    Instead of updating all parameters in W, we freeze W₀ and learn low-rank matrices B and A.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Section switching
+        function showSection(sectionId) {
+            document.querySelectorAll('.concept-section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.querySelectorAll('.nav-tab').forEach(tab => {
+                tab.classList.remove('active');
+            });
+            
+            document.getElementById(sectionId).classList.add('active');
+            event.target.classList.add('active');
+            
+            initializeSection(sectionId);
+        }
+
+        function initializeSection(sectionId) {
+            switch(sectionId) {
+                case 'tokenization':
+                    tokenize('word');
+                    break;
+                case 'embeddings':
+                    drawEmbeddings();
+                    break;
+                case 'attention':
+                    drawAttention();
+                    break;
+                case 'architecture':
+                    showArchitecture('decoder');
+                    break;
+                case 'temperature':
+                    updateTemperature(1.0);
+                    break;
+                case 'lifecycle':
+                    explainStage('pretrain');
+                    break;
+                case 'lora':
+                    updateLoRA(8);
+                    break;
+            }
+        }
+
+        // Tokenization
+        function tokenize(type) {
+            const text = document.getElementById('tokenInput').value;
+            const output = document.getElementById('tokenOutput');
+            const explanation = document.getElementById('tokenizerExplanation');
+            const statsBox = document.getElementById('tokenStats');
+            
+            let tokens = [];
+            let explanationText = '';
+            let vocabSize = 0;
+            
+            switch(type) {
+                case 'word':
+                    tokens = text.split(' ');
+                    vocabSize = 50000;
+                    explanationText = '<strong>WORD TOKENIZER:</strong> Splits at whitespace. Simple but creates massive vocabularies (~50K tokens).';
+                    break;
+                case 'subword':
+                    tokens = text.split(' ').flatMap(word => {
+                        if (word.length > 4) {
+                            return [word.substring(0, 3), '##' + word.substring(3)];
+                        }
+                        return [word];
+                    });
+                    vocabSize = 30000;
+                    explanationText = '<strong>SUBWORD TOKENIZER (BPE):</strong> Breaks into meaningful pieces. Most modern LLMs use this.';
+                    break;
+                case 'char':
+                    tokens = text.split('');
+                    vocabSize = 256;
+                    explanationText = '<strong>CHARACTER TOKENIZER:</strong> Individual characters/bytes. Tiny vocabulary but very long sequences.';
+                    break;
+            }
+            
+            output.innerHTML = tokens.map(token => 
+                `<span class="token-box">${token || '␣'}</span>`
+            ).join('');
+            
+            explanation.innerHTML = explanationText;
+            
+            statsBox.innerHTML = `
+                <div class="stat">
+                    <span class="stat-value">${tokens.length}</span>
+                    <span class="stat-label">Tokens</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">${vocabSize.toLocaleString()}</span>
+                    <span class="stat-label">Vocab Size</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">${(tokens.length / text.split(' ').length).toFixed(1)}×</span>
+                    <span class="stat-label">Tokens/Word</span>
+                </div>
+            `;
+        }
+
+        // Embeddings
+        function drawEmbeddings() {
+            const canvas = document.getElementById('embeddingCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            // Grid
+            ctx.strokeStyle = '#e0e0e0';
+            ctx.lineWidth = 1;
+            for(let x = 0; x < canvas.width; x += 50) {
+                ctx.beginPath();
+                ctx.moveTo(x, 0);
+                ctx.lineTo(x, canvas.height);
+                ctx.stroke();
+            }
+            for(let y = 0; y < canvas.height; y += 50) {
+                ctx.beginPath();
+                ctx.moveTo(0, y);
+                ctx.lineTo(canvas.width, y);
+                ctx.stroke();
+            }
+            
+            // Axes
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(450, 50);
+            ctx.lineTo(450, 450);
+            ctx.moveTo(100, 250);
+            ctx.lineTo(800, 250);
+            ctx.stroke();
+            
+            // Words
+            const words = [
+                {word: 'teddy', x: 580, y: 180, emoji: '🧸'},
+                {word: 'bear', x: 600, y: 160, emoji: '🐻'},
+                {word: 'cute', x: 560, y: 200, emoji: '😊'},
+                {word: 'airplane', x: 350, y: 300, emoji: '✈️'}
+            ];
+            
+            words.forEach(w => {
+                ctx.fillStyle = '#ff3366';
+                ctx.beginPath();
+                ctx.arc(w.x, w.y, 10, 0, Math.PI * 2);
+                ctx.fill();
+                
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+                
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 16px "Space Mono"';
+                ctx.fillText(w.emoji + ' ' + w.word, w.x + 20, w.y + 5);
+            });
+            
+            ctx.fillStyle = '#000';
+            ctx.font = '12px "IBM Plex Sans"';
+            ctx.fillText('2D PROJECTION OF HIGH-DIMENSIONAL EMBEDDING SPACE', 250, 480);
+        }
+
+        function showSimilarity(word1, word2, similarity) {
+            const canvas = document.getElementById('embeddingCanvas');
+            const ctx = canvas.getContext('2d');
+            const statsBox = document.getElementById('similarityStats');
+            
+            drawEmbeddings();
+            
+            const centerX = 450, centerY = 250;
+            const positions = {
+                'teddy': {x: 580, y: 180},
+                'bear': {x: 600, y: 160},
+                'cute': {x: 560, y: 200},
+                'airplane': {x: 350, y: 300}
+            };
+            
+            const pos1 = positions[word1];
+            const pos2 = positions[word2];
+            
+            if (pos1 && pos2) {
+                ctx.strokeStyle = '#0066ff';
+                ctx.lineWidth = 4;
+                ctx.setLineDash([8, 8]);
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(pos1.x, pos1.y);
+                ctx.stroke();
+                
+                ctx.strokeStyle = '#ff3366';
+                ctx.beginPath();
+                ctx.moveTo(centerX, centerY);
+                ctx.lineTo(pos2.x, pos2.y);
+                ctx.stroke();
+                ctx.setLineDash([]);
+                
+                const angle = Math.acos(similarity) * 180 / Math.PI;
+                ctx.strokeStyle = '#ffff00';
+                ctx.lineWidth = 3;
+                ctx.beginPath();
+                ctx.arc(centerX, centerY, 60, 
+                    Math.atan2(pos1.y - centerY, pos1.x - centerX),
+                    Math.atan2(pos2.y - centerY, pos2.x - centerX)
+                );
+                ctx.stroke();
+                
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 32px "Space Mono"';
+                ctx.fillText(`COS θ = ${similarity}`, 300, 60);
+                ctx.font = '20px "Space Mono"';
+                ctx.fillText(`ANGLE = ${angle.toFixed(1)}°`, 300, 90);
+            }
+            
+            statsBox.innerHTML = `
+                <div class="stat">
+                    <span class="stat-value">${similarity}</span>
+                    <span class="stat-label">Similarity</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">${(Math.acos(similarity) * 180 / Math.PI).toFixed(1)}°</span>
+                    <span class="stat-label">Angle</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">${similarity > 0.7 ? 'HIGH' : similarity > 0.3 ? 'MED' : 'LOW'}</span>
+                    <span class="stat-label">Relation</span>
+                </div>
+            `;
+        }
+
+        // Attention
+        function drawAttention() {
+            const canvas = document.getElementById('attentionCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const sentence = ['a', 'cute', 'teddy', 'bear', 'is', 'reading'];
+            const boxWidth = 120;
+            const boxHeight = 70;
+            const startY = 150;
+            const spacing = 140;
+            
+            sentence.forEach((word, i) => {
+                const x = 30 + i * spacing;
+                
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(x, startY, boxWidth, boxHeight);
+                
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(x, startY, boxWidth, boxHeight);
+                
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 20px "Space Mono"';
+                ctx.textAlign = 'center';
+                ctx.fillText(word.toUpperCase(), x + boxWidth/2, startY + boxHeight/2 + 7);
+            });
+            
+            ctx.font = 'bold 16px "Space Mono"';
+            ctx.fillStyle = '#000';
+            ctx.textAlign = 'left';
+            ctx.fillText('CLICK "TEDDY" OR "BEAR" TO SEE ATTENTION WEIGHTS', 30, 80);
+            
+            canvas.onclick = function(e) {
+                const rect = canvas.getBoundingClientRect();
+                const x = e.clientX - rect.left;
+                const y = e.clientY - rect.top;
+                
+                sentence.forEach((word, i) => {
+                    const boxX = 30 + i * spacing;
+                    if (x >= boxX && x <= boxX + boxWidth && y >= startY && y <= startY + boxHeight) {
+                        if (i === 2 || i === 3) {
+                            const scores = i === 2 
+                                ? [0.1, 0.2, 0.3, 0.3, 0.05, 0.05]
+                                : [0.1, 0.15, 0.35, 0.35, 0.03, 0.02];
+                            drawAttentionPattern(i, scores, sentence);
+                        }
+                    }
+                });
+            };
+        }
+
+        function drawAttentionPattern(queryIdx, scores, sentence) {
+            const canvas = document.getElementById('attentionCanvas');
+            const ctx = canvas.getContext('2d');
+            const statsBox = document.getElementById('attentionStats');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const boxWidth = 120;
+            const boxHeight = 70;
+            const startY = 150;
+            const spacing = 140;
+            
+            sentence.forEach((word, i) => {
+                const x = 30 + i * spacing;
+                const alpha = scores[i];
+                
+                ctx.fillStyle = `rgba(255, 51, 102, ${alpha * 0.8})`;
+                ctx.fillRect(x, startY, boxWidth, boxHeight);
+                
+                ctx.strokeStyle = i === queryIdx ? '#000' : '#000';
+                ctx.lineWidth = i === queryIdx ? 6 : 3;
+                ctx.strokeRect(x, startY, boxWidth, boxHeight);
+                
+                ctx.fillStyle = alpha > 0.5 ? '#fff' : '#000';
+                ctx.font = 'bold 20px "Space Mono"';
+                ctx.textAlign = 'center';
+                ctx.fillText(word.toUpperCase(), x + boxWidth/2, startY + boxHeight/2 + 7);
+                
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 18px "Space Mono"';
+                ctx.fillText(scores[i].toFixed(2), x + boxWidth/2, startY + boxHeight + 30);
+            });
+            
+            const queryX = 30 + queryIdx * spacing + boxWidth/2;
+            const queryY = startY + boxHeight;
+            
+            sentence.forEach((word, i) => {
+                const targetX = 30 + i * spacing + boxWidth/2;
+                const targetY = startY;
+                
+                ctx.strokeStyle = '#ffff00';
+                ctx.lineWidth = scores[i] * 15;
+                ctx.beginPath();
+                ctx.moveTo(queryX, queryY);
+                ctx.lineTo(targetX, targetY);
+                ctx.stroke();
+            });
+            
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 16px "Space Mono"';
+            ctx.textAlign = 'left';
+            ctx.fillText(`ATTENTION PATTERN FOR "${sentence[queryIdx].toUpperCase()}"`, 30, 80);
+            
+            const maxAttention = Math.max(...scores);
+            const entropy = -scores.reduce((sum, p) => sum + (p > 0 ? p * Math.log2(p) : 0), 0);
+            
+            statsBox.innerHTML = `
+                <div class="stat">
+                    <span class="stat-value">${maxAttention.toFixed(2)}</span>
+                    <span class="stat-label">Max Attention</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">${entropy.toFixed(2)}</span>
+                    <span class="stat-label">Entropy</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">${scores.filter(s => s > 0.1).length}</span>
+                    <span class="stat-label">Active</span>
+                </div>
+            `;
+        }
+
+        // Architecture
+        function showArchitecture(type) {
+            const canvas = document.getElementById('architectureCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const statsBox = document.getElementById('archStats');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const explanations = {
+                'encoder': {
+                    text: '<strong>ENCODER-ONLY (BERT):</strong> Bidirectional self-attention. Best for classification, embeddings.',
+                    layers: 12,
+                    params: '110M',
+                    use: 'Classification'
+                },
+                'decoder': {
+                    text: '<strong>DECODER-ONLY (GPT):</strong> Causal attention. Best for text generation. Most modern LLMs use this.',
+                    layers: 96,
+                    params: '175B',
+                    use: 'Generation'
+                },
+                'both': {
+                    text: '<strong>ENCODER-DECODER (T5):</strong> Encoder processes input, decoder generates output. Best for translation.',
+                    layers: 24,
+                    params: '11B',
+                    use: 'Translation'
+                }
+            };
+            
+            const info = explanations[type];
+            document.getElementById('archExplanation').innerHTML = info.text;
+            
+            if (type === 'encoder') {
+                drawEncoderArchitecture(ctx);
+            } else if (type === 'decoder') {
+                drawDecoderArchitecture(ctx);
+            } else {
+                drawFullTransformer(ctx);
+            }
+            
+            statsBox.innerHTML = `
+                <div class="stat">
+                    <span class="stat-value">${info.layers}</span>
+                    <span class="stat-label">Layers</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">${info.params}</span>
+                    <span class="stat-label">Parameters</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">${info.use}</span>
+                    <span class="stat-label">Best For</span>
+                </div>
+            `;
+        }
+
+        function drawEncoderArchitecture(ctx) {
+            const layers = ['INPUT', 'SELF-ATT', 'FFN', 'SELF-ATT', 'FFN', 'OUTPUT'];
+            const startY = 100;
+            const spacing = 100;
+            
+            layers.forEach((layer, i) => {
+                const y = startY + i * spacing;
+                
+                ctx.fillStyle = i % 2 === 0 ? '#0066ff' : '#fff';
+                ctx.fillRect(350, y, 200, 70);
+                
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(350, y, 200, 70);
+                
+                ctx.fillStyle = i % 2 === 0 ? '#fff' : '#000';
+                ctx.font = 'bold 18px "Space Mono"';
+                ctx.textAlign = 'center';
+                ctx.fillText(layer, 450, y + 45);
+                
+                if (i < layers.length - 1) {
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(450, y + 70);
+                    ctx.lineTo(450, y + spacing);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(440, y + spacing - 15);
+                    ctx.lineTo(450, y + spacing);
+                    ctx.lineTo(460, y + spacing - 15);
+                    ctx.stroke();
+                }
+            });
+            
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 14px "Space Mono"';
+            ctx.textAlign = 'left';
+            ctx.fillText('BIDIRECTIONAL: ALL TOKENS VISIBLE', 50, 50);
+        }
+
+        function drawDecoderArchitecture(ctx) {
+            const layers = ['INPUT', 'MASKED-ATT', 'FFN', 'MASKED-ATT', 'FFN', 'OUTPUT'];
+            const startY = 100;
+            const spacing = 100;
+            
+            layers.forEach((layer, i) => {
+                const y = startY + i * spacing;
+                
+                ctx.fillStyle = i % 2 === 0 ? '#ff3366' : '#fff';
+                ctx.fillRect(350, y, 200, 70);
+                
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(350, y, 200, 70);
+                
+                ctx.fillStyle = i % 2 === 0 ? '#fff' : '#000';
+                ctx.font = 'bold 16px "Space Mono"';
+                ctx.textAlign = 'center';
+                ctx.fillText(layer, 450, y + 45);
+                
+                if (i < layers.length - 1) {
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 4;
+                    ctx.beginPath();
+                    ctx.moveTo(450, y + 70);
+                    ctx.lineTo(450, y + spacing);
+                    ctx.stroke();
+                    
+                    ctx.beginPath();
+                    ctx.moveTo(440, y + spacing - 15);
+                    ctx.lineTo(450, y + spacing);
+                    ctx.lineTo(460, y + spacing - 15);
+                    ctx.stroke();
+                }
+            });
+            
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 14px "Space Mono"';
+            ctx.textAlign = 'left';
+            ctx.fillText('CAUSAL: ONLY PREVIOUS TOKENS VISIBLE', 50, 50);
+        }
+
+        function drawFullTransformer(ctx) {
+            ctx.fillStyle = '#0066ff';
+            ctx.fillRect(100, 200, 180, 100);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(100, 200, 180, 100);
+            
+            ctx.fillRect(100, 350, 180, 100);
+            ctx.strokeRect(100, 350, 180, 100);
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 20px "Space Mono"';
+            ctx.textAlign = 'center';
+            ctx.fillText('ENCODER', 190, 255);
+            ctx.fillText('ENCODER', 190, 405);
+            
+            ctx.fillStyle = '#ff3366';
+            ctx.fillRect(620, 200, 180, 100);
+            ctx.strokeStyle = '#000';
+            ctx.strokeRect(620, 200, 180, 100);
+            
+            ctx.fillRect(620, 350, 180, 100);
+            ctx.strokeRect(620, 350, 180, 100);
+            
+            ctx.fillStyle = '#fff';
+            ctx.fillText('DECODER', 710, 255);
+            ctx.fillText('DECODER', 710, 405);
+            
+            ctx.strokeStyle = '#ffff00';
+            ctx.lineWidth = 6;
+            ctx.beginPath();
+            ctx.moveTo(280, 250);
+            ctx.lineTo(620, 250);
+            ctx.stroke();
+            
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 16px "Space Mono"';
+            ctx.fillText('CROSS-ATTENTION', 400, 240);
+            
+            ctx.fillText('INPUT', 190, 180);
+            ctx.fillText('OUTPUT', 710, 180);
+        }
+
+        // Temperature
+        function updateTemperature(temp) {
+            document.getElementById('tempValue').textContent = temp;
+            
+            const canvas = document.getElementById('temperatureCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const statsBox = document.getElementById('tempStats');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const tokens = ['cute', 'adorable', 'nice', 'good', 'okay'];
+            const baseProbs = [0.5, 0.3, 0.15, 0.04, 0.01];
+            
+            const probs = baseProbs.map(p => Math.exp(Math.log(p) / temp));
+            const sum = probs.reduce((a, b) => a + b, 0);
+            const normalizedProbs = probs.map(p => p / sum);
+            
+            const barWidth = 140;
+            const maxHeight = 350;
+            const startX = 80;
+            const startY = 430;
+            
+            normalizedProbs.forEach((prob, i) => {
+                const x = startX + i * 160;
+                const height = prob * maxHeight;
+                
+                ctx.fillStyle = '#ff3366';
+                ctx.fillRect(x, startY - height, barWidth, height);
+                
+                ctx.strokeStyle = '#000';
+                ctx.lineWidth = 4;
+                ctx.strokeRect(x, startY - height, barWidth, height);
+                
+                ctx.fillStyle = '#000';
+                ctx.font = 'bold 16px "Space Mono"';
+                ctx.textAlign = 'center';
+                ctx.fillText(tokens[i].toUpperCase(), x + barWidth/2, startY + 25);
+                ctx.font = 'bold 20px "Space Mono"';
+                ctx.fillText((prob * 100).toFixed(1) + '%', x + barWidth/2, startY - height - 15);
+            });
+            
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 24px "Space Mono"';
+            ctx.textAlign = 'left';
+            const mode = temp < 0.7 ? 'DETERMINISTIC' : temp < 1.3 ? 'BALANCED' : 'CREATIVE';
+            ctx.fillText(`T = ${temp} → ${mode}`, 50, 50);
+            
+            const entropy = -normalizedProbs.reduce((sum, p) => sum + (p > 0 ? p * Math.log2(p) : 0), 0);
+            const topToken = tokens[normalizedProbs.indexOf(Math.max(...normalizedProbs))];
+            
+            statsBox.innerHTML = `
+                <div class="stat">
+                    <span class="stat-value">${(Math.max(...normalizedProbs) * 100).toFixed(1)}%</span>
+                    <span class="stat-label">Top Prob</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">${entropy.toFixed(2)}</span>
+                    <span class="stat-label">Entropy</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">${topToken.toUpperCase()}</span>
+                    <span class="stat-label">Most Likely</span>
+                </div>
+            `;
+        }
+
+        // Lifecycle
+        function explainStage(stage) {
+            const canvas = document.getElementById('lifecycleCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const statsBox = document.getElementById('lifecycleStats');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const explanations = {
+                'pretrain': {
+                    title: 'PRETRAINING',
+                    text: 'Learn general language patterns from massive text corpora',
+                    data: 'TRILLIONS OF TOKENS FROM INTERNET',
+                    color: '#0066ff',
+                    duration: '~30 days',
+                    compute: '10,000 GPUs'
+                },
+                'finetune': {
+                    title: 'FINETUNING',
+                    text: 'Adapt to specific tasks using curated examples',
+                    data: 'THOUSANDS OF TASK-SPECIFIC PAIRS',
+                    color: '#ff3366',
+                    duration: '~1-2 days',
+                    compute: '100 GPUs'
+                },
+                'preference': {
+                    title: 'PREFERENCE TUNING',
+                    text: 'Align outputs with human preferences via RLHF',
+                    data: 'HUMAN FEEDBACK ON OUTPUTS',
+                    color: '#ffff00',
+                    duration: '~3-5 days',
+                    compute: '500 GPUs'
+                }
+            };
+            
+            const info = explanations[stage];
+            
+            ctx.fillStyle = info.color;
+            ctx.fillRect(200, 100, 500, 140);
+            
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(200, 100, 500, 140);
+            
+            ctx.fillStyle = info.color === '#ffff00' ? '#000' : '#fff';
+            ctx.font = 'bold 32px "Space Mono"';
+            ctx.textAlign = 'center';
+            ctx.fillText(info.title, 450, 150);
+            
+            ctx.font = '16px "IBM Plex Sans"';
+            ctx.fillText(info.text, 450, 190);
+            
+            ctx.fillStyle = '#fff';
+            ctx.fillRect(150, 280, 600, 80);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(150, 280, 600, 80);
+            
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 18px "Space Mono"';
+            ctx.fillText(info.data, 450, 325);
+            
+            document.getElementById('stageExplanation').innerHTML = `<strong>${info.title}:</strong><br>${info.text}`;
+            
+            document.querySelectorAll('.lifecycle-stage').forEach(el => el.classList.remove('pulse'));
+            const stages = ['pretrain', 'finetune', 'preference'];
+            document.querySelectorAll('.lifecycle-stage')[stages.indexOf(stage)].classList.add('pulse');
+            
+            statsBox.innerHTML = `
+                <div class="stat">
+                    <span class="stat-value">${info.duration}</span>
+                    <span class="stat-label">Duration</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">${info.compute}</span>
+                    <span class="stat-label">Compute</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">${stages.indexOf(stage) + 1}/3</span>
+                    <span class="stat-label">Stage</span>
+                </div>
+            `;
+        }
+
+        // LoRA
+        function updateLoRA(rank) {
+            document.getElementById('rankValue').textContent = rank;
+            
+            const canvas = document.getElementById('loraCanvas');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            const statsBox = document.getElementById('loraStats');
+            
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+            
+            const d = 512;
+            const k = 512;
+            
+            ctx.fillStyle = '#0066ff';
+            ctx.fillRect(50, 150, 180, 180);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(50, 150, 180, 180);
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 32px "Space Mono"';
+            ctx.textAlign = 'center';
+            ctx.fillText('W', 140, 250);
+            ctx.font = '16px "Space Mono"';
+            ctx.fillText(`${d}×${k}`, 140, 280);
+            
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 48px "Space Mono"';
+            ctx.fillText('≈', 270, 250);
+            
+            ctx.fillStyle = '#ccc';
+            ctx.fillRect(360, 150, 140, 180);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(360, 150, 140, 180);
+            
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 28px "Space Mono"';
+            ctx.fillText('W₀', 430, 245);
+            ctx.font = '14px "Space Mono"';
+            ctx.fillText('FROZEN', 430, 270);
+            
+            ctx.font = 'bold 48px "Space Mono"';
+            ctx.fillText('+', 540, 250);
+            
+            ctx.fillStyle = '#ff3366';
+            ctx.fillRect(600, 190, 100, rank * 2.5);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(600, 190, 100, rank * 2.5);
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 24px "Space Mono"';
+            ctx.fillText('B', 650, 190 + rank * 1.25);
+            ctx.font = '14px "Space Mono"';
+            ctx.fillText(`${d}×${rank}`, 650, 190 + rank * 1.25 + 25);
+            
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 40px "Space Mono"';
+            ctx.fillText('×', 730, 250);
+            
+            ctx.fillStyle = '#ff3366';
+            ctx.fillRect(780, 150, rank * 2.5, 100);
+            ctx.strokeStyle = '#000';
+            ctx.lineWidth = 4;
+            ctx.strokeRect(780, 150, rank * 2.5, 100);
+            
+            ctx.fillStyle = '#fff';
+            ctx.font = 'bold 24px "Space Mono"';
+            ctx.fillText('A', 780 + rank * 1.25, 205);
+            ctx.font = '14px "Space Mono"';
+            ctx.fillText(`${rank}×${k}`, 780 + rank * 1.25, 230);
+            
+            const originalParams = d * k;
+            const loraParams = d * rank + rank * k;
+            const reduction = ((1 - loraParams / originalParams) * 100).toFixed(1);
+            const speedup = (originalParams / loraParams).toFixed(1);
+            
+            ctx.fillStyle = '#000';
+            ctx.font = 'bold 20px "Space Mono"';
+            ctx.textAlign = 'left';
+            ctx.fillText(`ORIGINAL: ${originalParams.toLocaleString()} PARAMS`, 50, 400);
+            ctx.fillText(`LORA: ${loraParams.toLocaleString()} PARAMS`, 50, 430);
+            ctx.fillStyle = '#ff3366';
+            ctx.fillText(`REDUCTION: ${reduction}% FEWER!`, 50, 460);
+            
+            document.getElementById('loraExplanation').innerHTML = `
+                <strong>LORA WITH RANK ${rank}:</strong><br>
+                Reduce trainable parameters from ${originalParams.toLocaleString()} to ${loraParams.toLocaleString()} 
+                (${reduction}% reduction). Training is ${speedup}× faster!
+            `;
+            
+            statsBox.innerHTML = `
+                <div class="stat">
+                    <span class="stat-value">${reduction}%</span>
+                    <span class="stat-label">Reduction</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">${speedup}×</span>
+                    <span class="stat-label">Speedup</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-value">${loraParams.toLocaleString()}</span>
+                    <span class="stat-label">Trainable</span>
+                </div>
+            `;
+        }
+
+        // Initialize
+        initializeSection('tokenization');
+    </script>
+</body>
+</html>
